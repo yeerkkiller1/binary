@@ -281,7 +281,7 @@
 		if(e.key === "Backspace") {
 			pageUrlValue = pageUrlValue.slice(0, -1);
 		} else {
-			pageUrlValue += e.key;
+			pageUrlValue += String.fromCharCode(e.keyCode);
 		}
 		onUpdatePageUrlValue();
 	});
@@ -289,9 +289,9 @@
 		e.preventDefault();
 		if(window.pageUrl.value && window.pageUrl.value.length > pageUrlValue.length) {
 			pageUrlValue = window.pageUrl.value;
-			window.pageUrl.value = "";
 			onUpdatePageUrlValue();
 		}
+		window.pageUrl.value = "";
 	});
 
 	window.onmessage = e => {
