@@ -207,7 +207,7 @@ createServer(async function (req, res) {
         res.end();
     }
 })
-.listen(9000, "localhost");
+.listen(9000);
 
 let authClient = new google.auth.OAuth2({ clientId: validateObj.clientID, clientSecret: validateObj.clientSecret, redirectUri: "postmessage" });
 function getToken(oneTimeCode: string) {
