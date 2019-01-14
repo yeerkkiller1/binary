@@ -9,7 +9,7 @@
 		
         <div style="display: flex">
             <button onClick="loadPage()" style="flex-shrink: 0">Load Page</button>
-            <input id="pageUrl" style="width: 100%" type="tel"/>
+            <input id="pageUrl" style="width: 100%" type="password" />
 		</div>
 		<div id="pageUrlValueDiv"></div>
     </div>
@@ -275,7 +275,7 @@
 		}
 		pageUrlValueDiv.appendChild(elem);
 	}
-	window.pageUrl.addEventListener("keydown", (e) => {
+	window.pageUrl.addEventListener("keyup", (e) => {
 		if(e.key === "Shift") return;
 		e.preventDefault();
 		if(e.key === "Backspace") {
@@ -284,6 +284,7 @@
 			pageUrlValue += String.fromCharCode(e.keyCode);
 		}
 		onUpdatePageUrlValue();
+		window.pageUrl.value = "";
 	});
 	window.pageUrl.addEventListener("input", (e) => {
 		e.preventDefault();
