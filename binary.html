@@ -275,21 +275,10 @@
 		}
 		pageUrlValueDiv.appendChild(elem);
 	}
-	window.pageUrl.addEventListener("keyup", (e) => {
-		if(e.key === "Shift") return;
-		e.preventDefault();
-		if(e.key === "Backspace") {
-			pageUrlValue = pageUrlValue.slice(0, -1);
-		} else {
-			pageUrlValue += String.fromCharCode(e.keyCode);
-		}
-		onUpdatePageUrlValue();
-		window.pageUrl.value = "";
-	});
 	window.pageUrl.addEventListener("input", (e) => {
 		e.preventDefault();
-		if(window.pageUrl.value && window.pageUrl.value.length > pageUrlValue.length) {
-			pageUrlValue = window.pageUrl.value;
+		if(window.pageUrl.value) {
+			pageUrlValue += window.pageUrl.value;
 			onUpdatePageUrlValue();
 		}
 		window.pageUrl.value = "";
