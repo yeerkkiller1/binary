@@ -275,6 +275,14 @@
 		}
 		pageUrlValueDiv.appendChild(elem);
 	}
+	window.pageUrl.addEventListener("keyup", (e) => {
+		if(e.key === "Backspace") {
+			e.preventDefault();
+			pageUrlValue = pageUrlValue.slice(0, -1);
+			onUpdatePageUrlValue();
+			window.pageUrl.value = "";
+		}
+	});
 	window.pageUrl.addEventListener("input", (e) => {
 		e.preventDefault();
 		if(window.pageUrl.value) {
