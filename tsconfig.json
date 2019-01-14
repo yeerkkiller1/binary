@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "sourceMap": true,
+        "strict": true,
+        "module": "commonjs",
+        "target": "es2017",
+        "jsx": "react",
+        //"jsxFactory": "React.createElement",
+        "types": [
+            "node"
+        ]
+    },
+    "exclude": ["node_modules/preact/dist/preact.d.ts"]
+}

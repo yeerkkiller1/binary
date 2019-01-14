@@ -1,0 +1,395 @@
+<style>
+    body {
+        margin: 0px;
+    }
+</style>
+<div style="display: flex; flex-flow: column; height: 100vw; margin: 8px">
+        <div style="flex-shrink: 0">
+		<button onClick="signin()">Signin</button>
+		
+        <div style="display: flex">
+            <button onClick="loadPage()" style="flex-shrink: 0">Load Page</button>
+            <input id="pageUrl" style="width: 100%"/>
+		</div>
+		<div id="pageUrlValueDiv"></div>
+    </div>
+    <div style="flex-shrink: 0">
+        <div id="alphabet">ABDHP  CFLX EJT IR EIQ  GN KM VZ SY U  OW  0 </div>
+        <div id="alphabetSymbols"></div>
+	</div>
+	<button onClick="pageUrlValue = 'https://en.wikipedia.org/wiki/Main_Page'; loadPage();">Load wikipedia</button>
+	<button onClick="pageUrlValue = ''; onUpdatePageUrlValue();" style="flex-shrink: 0">Reset Page</button>
+    <iframe id="otherSite" style="width: 100%; height: 100%"></iframe>
+</div>
+
+<div id="result"></div>
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js">
+</script>
+<script src="https://apis.google.com/js/client:platform.js?onload=boot" async defer>
+</script>
+
+<script>
+    function replaceWithBinaryImages(
+        /** @type HTMLElement */
+        node
+    ) {
+        var imageCache = {};
+        function getImageUrl(value, scale, colorTint) {
+			colorTint = colorTint || { r: 0, g: 0, b: 0 };
+            var hash = JSON.stringify({value, scale, colorTint});
+            if(!(hash in imageCache)) {
+                var time = Date.now();
+                imageCache[hash] = getImageUrlInternal(value, scale, colorTint);
+                time = Date.now() - time;
+                if(time > 5) {
+                    console.log(`Generate char image took ${time.toFixed(0)}ms`);
+                }
+            }
+            return imageCache[hash];
+        }
+        function getImageUrlInternal(value, scale, colorTint) {
+            function getIndex(x, y, width) {
+                if(x >= width) {
+                    throw new Error(`Out of range x=${x}, y=${y}`);
+                }
+                if(y >= height) {
+                    throw new Error(`Out of range x=${x}, y=${y}`);
+                }
+                return y * (width * 4) + x * 4;
+            }
+            function setPixel(x, y, color, width) {
+				let index = getIndex(x, y, width);
+
+                img[index] = color.r;
+                img[index + 1] = color.g;
+                img[index + 2] = color.b;
+                img[index + 3] = color.a;
+            }
+            function getBinary(num, minBits) {
+                if(num !== ~~num) {
+                    throw new Error(`Number is not an integer ${num}`);
+                }
+
+                var bits = [];
+                var mask = 1;
+                while(num) {
+                    var bit = num & mask ? 1 : 0;
+                    num = num - (num & mask);
+                    bits.unshift(bit);
+                    mask = mask * 2;
+                }
+                while(bits.length % minBits !== 0) {
+                    bits.unshift(0);
+                }
+                return bits;
+            }
+            function scaleUpImageData(imageData, factor) {
+                let newImageData = context.createImageData(imageData.width * factor, imageData.height * factor);
+                var newData = newImageData.data;
+                function getIndex(x, y, width) {
+                    return y * (width * 4) + x * 4;
+                }
+
+                for(var y = 0; y < imageData.height; y++) {
+                    for(var x = 0; x < imageData.width; x++) {
+                        var index = getIndex(x, y, imageData.width);
+                        var newIndex = getIndex(x * factor, y * factor, newImageData.width);
+                        for(var i = 0; i < 4; i++) {
+                            var value = imageData.data[index + i];
+                            for(var sy = 0; sy < factor; sy++) {
+                                for(var sx = 0; sx < factor; sx++) {
+                                    newData[newIndex + i + sx * 4 + sy * newImageData.width * 4] = value;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return newImageData;
+            }
+            var canvasElement = document.createElement("canvas");
+            var context = canvasElement.getContext("2d", {});
+
+            var bits = getBinary(value, 8);
+
+
+            var width = 1;
+            var height = bits.length;
+            let imageData = context.createImageData(width, height);
+            let img = imageData.data;
+
+
+            for(var j = 0; j < bits.length; j++) {
+                let bit = bits[bits.length - j - 1];
+                if(bit === 0) {
+					let tint = colorTint.r + colorTint.g + colorTint.b;
+                    setPixel(0, j, {
+						r: 255 - tint + colorTint.r,
+						g: 255 - tint + colorTint.g,
+						b: 255 - tint + colorTint.b,
+						a: 255
+					}, width);
+                } else {
+                    setPixel(0, j, { r: colorTint.r, g: colorTint.g, b: colorTint.b, a: 255 }, width);
+                }
+            }
+
+
+            canvasElement.width = width * scale;
+            canvasElement.height = height * scale;
+
+            context.putImageData(scaleUpImageData(imageData, scale), 0, 0);
+            return canvasElement.toDataURL();
+        }
+
+        function getImg(ch, scale, colorTint) {
+            var img2 = document.createElement("img");
+            img2.src = getImageUrl(ch.charCodeAt(0), scale, colorTint);
+            return img2;
+        }
+
+        const trueParam = Date.now() + Math.random().toString();
+        function parseParams(paramsStr) {
+            if(!paramsStr) {
+                return {};
+            }
+            let paramsRaw = paramsStr.split("&");
+            let params = {};
+            for(var i = 0; i < paramsRaw.length; i++) {
+                let paramRaw = paramsRaw[i];
+                let paramParts = paramRaw.split("=");
+                let val = decodeURIComponent(paramParts[1]);
+                if(paramParts.length === 1) {
+                    val = trueParam;
+                }
+                params[decodeURIComponent(paramParts[0])] = val;
+            }
+            return params;
+        }
+
+        var NODE_TYPE_ELEMENT = 1;
+        var NODE_TYPE_TEXT = 3;
+
+		let parameters = parseParams(window.location.search.slice(1));
+		let {urlJSON, extraCode} = parameters;
+		let urlReal = urlJSON ? JSON.parse(urlJSON) : "";
+		let baseUrlOrigin = urlReal;
+		{
+			let indexStart = baseUrlOrigin.indexOf("://") + "://".length;
+			let slashStart = baseUrlOrigin.indexOf("/", indexStart);
+			if(slashStart < 0) {
+				slashStart = baseUrlOrigin.length;
+			}
+			baseUrlOrigin = baseUrlOrigin.slice(0, slashStart);
+		}
+		let baseUrlPath = urlReal;
+		{
+			let questionIndex = baseUrlPath.indexOf("?");
+			if(questionIndex >= 0) {
+				baseUrlPath = baseUrlPath.slice(0, questionIndex);
+			}
+			if(!baseUrlPath.endsWith("/")) {
+				let slashIndex = baseUrlPath.lastIndexOf("/");
+				if(baseUrlPath[slashIndex - 1] !== "/") {
+					baseUrlPath = baseUrlPath.slice(0, slashIndex + 1);
+				}
+			}
+		}
+
+		iterate(node, false);
+		
+		if(window.top !== window) {
+			let allButSearch = urlReal;
+			let searchIndex = allButSearch.indexOf("?");
+			if(searchIndex >= 0) {
+				allButSearch = allButSearch.slice(0, searchIndex);
+			}
+			window.top.postMessage(allButSearch, "*");
+		}
+        
+    
+        function iterate(/** @type HTMLElement */node, isLink) {
+            if(node.nodeType === NODE_TYPE_ELEMENT) {
+				if(node.hasAttribute("href")) {
+                    // Don't bother stripping the path, the server will just ignore it anyway.
+                    let linkUrl = node.getAttribute("href");
+                    if(linkUrl.includes("?")) {
+                        linkUrl += "&";
+                    } else {
+                        linkUrl += "?";
+					}
+					
+					// TODO: We need a full url resolver thing here..., so we can actually handle changing domains
+					if(linkUrl.includes("://")) {
+						linkUrl = linkUrl.slice(linkUrl.indexOf("://") + "://".length);
+						linkUrl = linkUrl.slice(linkUrl.indexOf("/"));
+					}
+					let base = baseUrlOrigin;
+					if(!linkUrl.startsWith("/")) {
+						base = baseUrlPath;
+						if(!base.endsWith("/")) {
+							base += "/";
+						}
+					}
+					let newUrl = JSON.stringify(base + linkUrl);
+					linkUrl += `urlJSON=${encodeURIComponent(newUrl)}&extraCode=${encodeURIComponent(extraCode)}`;
+					node.setAttribute("href", linkUrl);
+					isLink = true;
+				}
+				
+                // Making a copy is actually necessary, as we may add sibling to our children (so add new children) inside iterate
+                let children = Array.from(node.childNodes);
+                for(let childNode of children) {
+                    iterate(childNode, isLink);
+                }
+                
+                return;
+            }
+            if(node.nodeType === NODE_TYPE_TEXT) {
+                let text = node.textContent;
+                for(let i = 0; i < text.length; i++) {
+                    let ch = text[i];
+                    node.parentElement.insertBefore(
+						getImg(ch, 8, isLink ? { r: 0, g: 0, b: 50 } : undefined),
+						node
+					);
+                }
+                node.parentElement.removeChild(node);
+            }
+		}
+	}
+	
+	
+</script>
+<script>
+
+	var pageUrlValue = localStorage.lastLoadedUrl || "";
+	onUpdatePageUrlValue();
+	function onUpdatePageUrlValue() {
+		var elem = document.createElement("div");
+		elem.textContent = pageUrlValue;
+		replaceWithBinaryImages(elem);
+		while(pageUrlValueDiv.lastChild) {
+			pageUrlValueDiv.removeChild(pageUrlValueDiv.lastChild);
+		}
+		pageUrlValueDiv.appendChild(elem);
+	}
+	window.pageUrl.addEventListener("keydown", (e) => {
+		if(e.key === "Shift") return;
+		e.preventDefault();
+		if(e.key === "Backspace") {
+			pageUrlValue = pageUrlValue.slice(0, -1);
+		} else {
+			pageUrlValue += e.key;
+		}
+		onUpdatePageUrlValue();
+	});
+	window.pageUrl.addEventListener("input", (e) => {
+		e.preventDefault();
+		if(window.pageUrl.value) {
+			pageUrlValue = window.pageUrl.value;
+			window.pageUrl.value = "";
+			onUpdatePageUrlValue();
+		}
+	});
+
+	window.onmessage = e => {
+		if(!e.data) return;
+		if(e.origin === document.location.origin) {
+			pageUrlValue = e.data;
+			onUpdatePageUrlValue();
+			localStorage.lastLoadedUrl = pageUrlValue;
+			window.otherSite.style.visibility = "";
+		}
+	};
+
+    async function loadPage() {
+        let url = pageUrlValue;
+        
+
+		window.otherSite.style.visibility = "hidden";
+
+		let injectScript = `<script>\n${replaceWithBinaryImages.toString()};\nreplaceWithBinaryImages(document.body);\n</scr${""}ipt>`;
+		injectScript = injectScript.replace(/(\s)\s*/g, "$1");
+			
+		
+        //let injectScript = `<script>document.body.style.background="blue";</scr${""}ipt>`;
+
+        window.otherSite.src = `/?urlJSON=${encodeURIComponent(JSON.stringify(url))}&extraCode=${encodeURIComponent(injectScript)}`;
+
+        //let fileContents = await loadFile(`/?urlJSON=${encodeURIComponent(JSON.stringify(url))}`);
+
+
+        //console.log(fileContents);
+    }
+
+    async function loadFile(path) {
+        let stack = new Error().stack;
+        let request = new XMLHttpRequest();
+
+        let resolve;
+        let reject;
+        let promise = new Promise((_resolve, _reject) => { resolve = _resolve; reject = _reject;  });
+
+        request.onload = resolve;
+        request.onerror = () => {
+            reject(request.responseText);
+        };
+        request.open("GET", path);
+        request.send();
+        await promise;
+        if(request.status !== 200) {
+            throw `Load file error for ${path}, error: ${request.statusText}, stack: ${stack}`;
+        }
+        return request.responseText;
+    }
+
+    function boot() {
+        gapi.load("auth2", function() {
+            auth2 = gapi.auth2.init({
+                client_id: "234755693286-6pnr5os79fhm6abdb5iamvht3v8lj652.apps.googleusercontent.com",
+                scope: "",
+            });
+        });
+    }
+    function signin() {
+        if(auth2 === undefined) {
+            alert("You clicked signin before we loaded the google api OR (more likely), we failed to load the google api.");
+        }
+        // TODO: We really need to use a redirect url to hit a server endpoint, and then have that endpoint check referer,
+        //  making it possible to never touch the code on the client ever. Although... I assume grantOfflineAccess may still
+        //  be callable from the javascript? I'm not sure... Or they could just completely rewrite the page, use a different api,
+        //  effectively allowing them to replace the site.
+        auth2.grantOfflineAccess().then(async oneTimeCodeObj => {
+            console.log(await loadFile(`/auth?code=${encodeURIComponent(oneTimeCodeObj.code)}`));
+        }, e => console.error(e));
+    }
+
+    
+
+    
+    var prefix = window.alphabet.textContent;
+    window.alphabetSymbols.textContent = prefix;
+    replaceWithBinaryImages(window.alphabetSymbols);
+
+    if(pageUrlValue && !window.location.search.includes("breakbreakbreak")) {
+        loadPage();
+    }
+
+    
+    
+</script>
+
+<style>
+    #canvas {
+        
+    }
+    #alphabet {
+        white-space: pre;
+        overflow-wrap: break-word;
+        font-size: 13.4px;
+        font-family: Courier New;
+        margin-bottom: 6px;
+    }
+</style>
